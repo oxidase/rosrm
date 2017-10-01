@@ -1,0 +1,44 @@
+<?xml version="1.0"?>
+<!-- %Tag(FULLTEXT,-1)% -->
+<package>
+  <!-- %Tag(NAME)% -->
+  <name>rosrm</name>
+  <!-- %EndTag(NAME)% -->
+  <!-- %Tag(VERSION)% -->
+  <version>5.12.0</version>
+  <!-- %EndTag(VERSION)% -->
+  <!-- %Tag(DESC)% -->
+  <description>ROS bindings for Open Source Routing Machine</description>
+  <!-- %EndTag(DESC)% -->
+
+  <!-- %Tag(MAINTAINER)% -->
+  <maintainer email="michael.krasnyk@gmail.com">Michael Krasnyk</maintainer>
+  <!-- %EndTag(MAINTAINER)% -->
+  <!-- %Tag(LICENSE)% -->
+  <license>BSD</license>
+  <!-- %EndTag(LICENSE)% -->
+  <!-- %Tag(URLS)% -->
+  <url type="website">http://project-osrm.org/</url>
+  <!-- %EndTag(URLS)% -->
+  <!-- %Tag(AUTHORS)% -->
+  <!-- <author email="you@yourdomain.tld">Jane Doe</author> -->
+  <!-- %EndTag(AUTHORS)% -->
+
+  <!-- %Tag(DEPS)% -->
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <build_depend>roscpp</build_depend>
+  <build_depend>rospy</build_depend>
+  <build_depend>std_msgs</build_depend>
+  <build_depend>geometry_msgs</build_depend>
+
+  <run_depend>roscpp</run_depend>
+  <run_depend>rospy</run_depend>
+  <run_depend>std_msgs</run_depend>
+  <run_depend>geometry_msgs</run_depend>
+  <!-- %EndTag(DEPS)% -->
+
+  <!-- %Tag(EXPORT)% -->
+  <!-- %EndTag(EXPORT)% -->
+</package>
+<!-- %EndTag(FULLTEXT)% -->
