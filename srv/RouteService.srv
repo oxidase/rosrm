@@ -1,4 +1,13 @@
 geometry_msgs/Pose[] waypoints
+float64[] radiuses
+Bearing[] bearings
+uint8[] approaches
+string[] exclude
+bool steps
+bool continue_straight
+uint8 annotation
+uint8 overview
+uint8 number_of_alternatives
 ---
 string code
 Route[] routes

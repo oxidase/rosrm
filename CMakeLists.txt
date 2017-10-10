@@ -11,8 +11,21 @@ include(FindPkgConfig)
 find_package(catkin REQUIRED COMPONENTS roscpp rospy std_msgs geometry_msgs genmsg)
 
 ## Declare ROS messages and services
-add_message_files(FILES Leg.msg Matching.msg Route.msg Step.msg)
-add_service_files(FILES MatchService.srv RouteService.srv)
+add_message_files(FILES
+  Annotation.msg
+  Approach.msg
+  Bearing.msg
+  Intersection.msg
+  Lane.msg
+  Leg.msg
+  Maneuver.msg
+  Matching.msg
+  Overview.msg
+  Route.msg
+  Step.msg)
+add_service_files(FILES
+  MatchService.srv
+  RouteService.srv)
 
 ## Generate added messages and services
 generate_messages(DEPENDENCIES std_msgs geometry_msgs)

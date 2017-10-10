@@ -1,0 +1,2 @@
+string[] indications
+bool valid
