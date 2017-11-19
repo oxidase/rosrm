@@ -1,6 +1,6 @@
 # %Tag(FULLTEXT)%
 cmake_minimum_required(VERSION 3.1)
-project(rosrm VERSION 5.12)
+project(rosrm VERSION 0.0.1)
 
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -15,14 +15,15 @@ add_message_files(FILES
   Annotation.msg
   Approach.msg
   Bearing.msg
+  Gaps.msg
   Intersection.msg
   Lane.msg
-  Leg.msg
   Maneuver.msg
   Matching.msg
   Overview.msg
   Route.msg
-  Step.msg)
+  RouteLeg.msg
+  RouteStep.msg)
 add_service_files(FILES
   MatchService.srv
   RouteService.srv)
@@ -37,7 +38,7 @@ set_property(TARGET catkin PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${catkin_INCLU
 set_property(TARGET catkin PROPERTY INTERFACE_LINK_LIBRARIES ${catkin_LIBRARIES})
 
 ## Declare libosrm
-pkg_check_modules(OSRM REQUIRED libosrm>=5.12)
+pkg_check_modules(OSRM REQUIRED libosrm>=5.13)
 add_library(libosrm INTERFACE IMPORTED)
 set_property(TARGET libosrm PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${OSRM_INCLUDE_DIRS})
 set_property(TARGET libosrm PROPERTY INTERFACE_LINK_LIBRARIES ${OSRM_LIBRARIES})
@@ -47,6 +48,7 @@ set(CMAKE_EXE_LINKER_FLAGS "-Wl,--unresolved-symbols=ignore-in-shared-libs ${CMA
 ## Build service server
 add_executable(rosrm_server src/rosrm_server.cpp)
 target_link_libraries(rosrm_server catkin libosrm)
+set_property(TARGET rosrm_server APPEND PROPERTY INCLUDE_DIRECTORIES ${PROJECT_SOURCE_DIR}/include)
 add_dependencies(rosrm_server rosrm_gencpp)
 
 # %EndTag(FULLTEXT)%

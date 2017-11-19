@@ -9,7 +9,7 @@
 #include <osrm/match_parameters.hpp>
 #include <osrm/json_container.hpp>
 
-#include "json_renderer.hpp"
+#include <util/json_renderer.hpp>
 #include <sstream>
 
 namespace
@@ -96,7 +96,7 @@ auto convert_maneuver(osrm::json::Object &maneuver)
 
 auto convert_step(osrm::json::Object &step)
 {
-    rosrm::Step result;
+    rosrm::RouteStep result;
     result.name = step.values["name"].get<osrm::util::json::String>().value;
     result.mode = step.values["mode"].get<osrm::util::json::String>().value;
     result.distance = step.values["distance"].get<osrm::util::json::Number>().value;
@@ -116,9 +116,35 @@ auto convert_step(osrm::json::Object &step)
     return result;
 }
 
+auto convert_annotation(osrm::json::Object &annotation)
+{
+    rosrm::Annotation result;
+
+    auto copy_values = [&annotation](const std::string &key, auto &vec) {
+        auto &values = annotation.values;
+        auto it = values.find(key);
+        if (it != values.end())
+        {
+            for (auto &v : it->second.get<osrm::util::json::Array>().values)
+            {
+                vec.emplace_back(v.get<osrm::util::json::Number>().value);
+            }
+        }
+    };
+
+    copy_values("duration", result.duration);
+    copy_values("nodes", result.nodes);
+    copy_values("distance", result.distance);
+    copy_values("weight", result.weight);
+    copy_values("datasources", result.datasources);
+    copy_values("speed", result.speed);
+
+    return result;
+}
+
 auto convert_leg(osrm::json::Object &leg)
 {
-    rosrm::Leg result;
+    rosrm::RouteLeg result;
     result.summary = leg.values["summary"].get<osrm::util::json::String>().value;
     result.distance = leg.values["distance"].get<osrm::util::json::Number>().value;
     result.duration = leg.values["duration"].get<osrm::util::json::Number>().value;
@@ -128,6 +154,11 @@ auto convert_leg(osrm::json::Object &leg)
     for (auto &step : steps)
     {
         result.steps.emplace_back(convert_step(step.get<osrm::util::json::Object>()));
+    }
+
+    if (leg.values.count("annotation"))
+    {
+        result.annotation = convert_annotation(leg.values["annotation"].get<osrm::util::json::Object>());
     }
 
     return result;
@@ -161,8 +192,36 @@ auto convert_matching(osrm::json::Object &matching)
     auto &geometry = matching.values["geometry"].get<osrm::util::json::Object>().values;
     result.coordinates = convert_coordinates(geometry["coordinates"].get<osrm::util::json::Array>());
 
+    auto &legs = matching.values["legs"].get<osrm::util::json::Array>().values;
+    for (auto &leg : legs)
+    {
+        result.legs.emplace_back(convert_leg(leg.get<osrm::util::json::Object>()));
+    }
+
     return result;
 }
+
+template<typename Request, typename Parameters>
+void convert_base_parameters(const Request &request, Parameters &parameters)
+{
+    for (const auto &radius : request.radiuses)
+    {
+        parameters.radiuses.push_back(radius == 0. ? boost::optional<double>() : radius);
+    }
+
+    for (const auto &approach : request.approaches)
+    {
+        parameters.approaches.push_back(static_cast<osrm::engine::Approach>(approach));
+    }
+
+    parameters.exclude = request.exclude;
+    parameters.steps = request.steps;
+    parameters.number_of_alternatives = request.number_of_alternatives;
+    parameters.annotations_type = static_cast<osrm::engine::api::RouteParameters::AnnotationsType>(request.annotation);
+    parameters.overview = static_cast<osrm::engine::api::RouteParameters::OverviewType>(request.overview);
+    parameters.continue_straight = request.continue_straight;
+}
+
 }
 
 struct OSRMProxy
@@ -174,10 +233,13 @@ struct OSRMProxy
         // Set route parameters
         osrm::RouteParameters parameters;
 
+        // Set common parameters
+        convert_base_parameters(req, parameters);
+
         // Set fixed parameters
         parameters.geometries = osrm::engine::api::RouteParameters::GeometriesType::GeoJSON;
 
-        // Set request parameters
+        // Set request waypoints and bearings
         for (const auto &waypoint : req.waypoints)
         {
             auto longitude = osrm::util::FloatLongitude{waypoint.position.x};
@@ -185,35 +247,24 @@ struct OSRMProxy
             parameters.coordinates.emplace_back(longitude, latitude);
         }
 
-        for (const auto &radius : req.radiuses)
-        {
-            parameters.radiuses.push_back(radius == 0. ? boost::optional<double>() : radius);
-        }
-
         for (const auto &bearing : req.bearings)
         {
             parameters.bearings.push_back(osrm::engine::Bearing{bearing.bearing, bearing.range});
         }
 
-        for (const auto &approach : req.approaches)
+        if (!parameters.IsValid())
         {
-            parameters.approaches.push_back(static_cast<osrm::engine::Approach>(approach));
+            res.code = "IncorrectParameters";
+            return true;
         }
-
-        parameters.exclude = req.exclude;
-        parameters.steps = req.steps;
-        parameters.number_of_alternatives = req.number_of_alternatives;
-        parameters.annotations_type = static_cast<osrm::engine::api::RouteParameters::AnnotationsType>(req.annotation);
-        parameters.overview = static_cast<osrm::engine::api::RouteParameters::OverviewType>(req.overview);
-        parameters.continue_straight = req.continue_straight;
 
         // Find a route
         osrm::json::Object response;
         const auto status = osrm.Route(parameters, response);
 
-        std::stringstream sstr;
-        osrm::util::json::render(sstr, response);
-        ROS_INFO("%s", sstr.str().c_str());
+        // std::stringstream sstr;
+        // osrm::util::json::render(sstr, response);
+        // ROS_INFO("%s", sstr.str().c_str());
 
         // Convert JSON response into a ROS message
         res.code = response.values["code"].get<osrm::util::json::String>().value;
@@ -222,7 +273,7 @@ struct OSRMProxy
             res.routes.emplace_back(convert_route(route.get<osrm::json::Object>()));
         }
 
-        return status == osrm::engine::Status::Ok;
+        return true;
     }
 
     bool match(rosrm::MatchService::Request  &req, rosrm::MatchService::Response &res)
@@ -231,6 +282,13 @@ struct OSRMProxy
         osrm::MatchParameters parameters;
         std::vector<unsigned> timestamps;
 
+        // Set common parameters
+        convert_base_parameters(req, parameters);
+
+        // Set fixed parameters
+        parameters.geometries = osrm::engine::api::RouteParameters::GeometriesType::GeoJSON;
+
+        // Set request waypoints, bearings and timestamps
         for (const auto &waypoint : req.waypoints)
         {
             auto longitude = osrm::util::FloatLongitude{waypoint.pose.position.x};
@@ -245,36 +303,24 @@ struct OSRMProxy
         if (std::any_of(timestamps.begin(), timestamps.end(), [](auto x) { return x != 0; } ))
             parameters.timestamps = std::move(timestamps);
 
-        // Set fixed parameters
-        parameters.geometries = osrm::engine::api::RouteParameters::GeometriesType::GeoJSON;
+        parameters.gaps = static_cast<osrm::engine::api::MatchParameters::GapsType>(req.gaps);
+        parameters.tidy = req.tidy;
 
-        // TODO: add parameters
-
-        // std::vector<boost::optional<Hint>> hints;
-        // std::vector<boost::optional<double>> radiuses;
-        // std::vector<boost::optional<Bearing>> bearings;
-        // std::vector<boost::optional<Approach>> approaches;
-        // std::vector<std::string> exclude;
-
-        // bool steps = false;
-        // unsigned number_of_alternatives = 0;
-        // bool annotations = false;
-        // AnnotationsType annotations_type = AnnotationsType::None;
-        // OverviewType overview = OverviewType::Simplified;
-        // boost::optional<bool> continue_straight;
-
-        // GapsType gaps;
-        // bool tidy;
+        if (!parameters.IsValid())
+        {
+            res.code = "IncorrectParameters";
+            return true;
+        }
 
         // Do a map-matching
         osrm::json::Object response;
         const auto status = osrm.Match(parameters, response);
 
-        std::stringstream sstr;
-        osrm::util::json::render(sstr, response);
-        ROS_INFO("%s", sstr.str().c_str());
+        // std::stringstream sstr;
+        // osrm::util::json::render(sstr, response);
+        // ROS_INFO("%s", sstr.str().c_str());
 
-        // // Convert JSON response into a ROS message
+        // Convert JSON response into a ROS message
         res.code = response.values["code"].get<osrm::util::json::String>().value;
         for (auto &matching : response.values["matchings"].get<osrm::json::Array>().values)
         {

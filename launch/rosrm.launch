@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <launch>
   <node pkg="rosrm" type="rosrm_server" name="rosrm" output="screen" cwd="node">
-    <param name="algorithm" value="CH" type="string" />
+    <param name="algorithm" value="MLD" type="string" />
   </node>
 </launch>

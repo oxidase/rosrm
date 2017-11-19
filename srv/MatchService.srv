@@ -1,4 +1,14 @@
 geometry_msgs/PoseStamped[] waypoints
+float64[] radiuses
+uint8[] approaches
+string[] exclude
+bool steps
+bool continue_straight
+uint8 annotation
+uint8 overview
+uint8 number_of_alternatives
+uint8 gaps
+bool tidy
 ---
 string code
 Matching[] matchings
