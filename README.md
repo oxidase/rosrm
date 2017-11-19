@@ -1,8 +1,6 @@
-# Open source routing machine ROS service
+ROS proxy services for [OSRM](http://project-osrm.org/)
 
-ROS service for [OSRM](http://project-osrm.org/)
-
-## How to build and run the service
+## How to build and run
 
 ### Build and setup local OSRM pipeline
 
@@ -40,13 +38,20 @@ osrm-contract /tmp/data/monaco-latest.osrm
 osrm-datastore /tmp/data/monaco-latest.osrm
 ```
 
-### Build and run the ROSRM service
+### Build and run the ROSRM services
 
+Running services with default parameters (using shared memory block and multi-layer Dijkstra preprocessing)
 ```
 catkin_make
 source devel/setup.sh
 rosrun rosrm rosrm_server
 ```
+
+Running services with modified parameters
+```
+rosrun rosrm rosrm_server _algorithm:=CH _base_path:=/tmp/data/monaco-latest.osrm
+```
+
 
 ### ROSRM requests
 
