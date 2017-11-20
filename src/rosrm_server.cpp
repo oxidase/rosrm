@@ -1,4 +1,3 @@
-#include <ros/ros.h>
 #include <rosrm/RouteService.h>
 #include <rosrm/MatchService.h>
 
@@ -8,8 +7,11 @@
 #include <osrm/route_parameters.hpp>
 #include <osrm/match_parameters.hpp>
 #include <osrm/json_container.hpp>
-
 #include <util/json_renderer.hpp>
+
+#include <ros/ros.h>
+#include <tf/transform_datatypes.h>
+
 #include <sstream>
 
 namespace
@@ -295,7 +297,18 @@ struct OSRMProxy
             auto latitude = osrm::util::FloatLatitude{waypoint.pose.position.y};
             parameters.coordinates.emplace_back(longitude, latitude);
 
-            // TODO: add bearings from waypoint.pose.orientation
+            tf::Quaternion orientation(waypoint.pose.orientation.x, waypoint.pose.orientation.y,
+                                       waypoint.pose.orientation.z, waypoint.pose.orientation.w);
+            if (fabs(orientation.length2() - 1 ) < tf::QUATERNION_TOLERANCE / 2)
+            {
+                const auto yaw = tf::getYaw(orientation);
+                const auto bearing = static_cast<short>(std::round((180. * yaw / M_PI) + (yaw < 0 ? 360. : 0.)));
+                parameters.bearings.push_back(osrm::engine::Bearing{bearing, 10});
+            }
+            else
+            {
+                parameters.bearings.push_back(boost::none);
+            }
 
             timestamps.push_back(waypoint.header.stamp.toNSec() / 1000000000ull);
         }
