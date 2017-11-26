@@ -270,6 +270,9 @@ struct OSRMProxy
 
         // Convert JSON response into a ROS message
         res.code = response.values["code"].get<osrm::util::json::String>().value;
+        if (status != osrm::engine::Status::Ok)
+            throw ros::Exception(response.values["message"].get<osrm::util::json::String>().value);
+
         for (auto &route : response.values["routes"].get<osrm::json::Array>().values)
         {
             res.routes.emplace_back(convert_route(route.get<osrm::json::Object>()));
@@ -335,6 +338,9 @@ struct OSRMProxy
 
         // Convert JSON response into a ROS message
         res.code = response.values["code"].get<osrm::util::json::String>().value;
+        if (status != osrm::engine::Status::Ok)
+            throw ros::Exception(response.values["message"].get<osrm::util::json::String>().value);
+
         for (auto &matching : response.values["matchings"].get<osrm::json::Array>().values)
         {
             res.matchings.emplace_back(convert_matching(matching.get<osrm::json::Object>()));
